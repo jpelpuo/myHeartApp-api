@@ -43,17 +43,22 @@
         // Attributes
         private $flour = null;
         private $sugar = null;
-        private $result = null;
+        public $prediction_result = null;
 
-        // function __construct($flour, $sugar){
-        //     $this->flour = $flour;
-        //     $this->sugar = $sugar;
-        // }
+        function __construct($flour, $sugar){
+            $this->flour = $flour;
+            $this->sugar = $sugar;
+        }
 
         function getPrediction(){
-            // $attributes = array($this->flour, $this->sugar);
-            $this->result = shell_exec('python "C:\xampp\htdocs\myHeartApp\model.py"');
-            return $this->result;
+            $attributes = array($this->flour, $this->sugar);
+            $result = shell_exec('python "C:/xampp/htdocs/myHeart-model/model.py" ' .escapeshellarg(json_encode($attributes)));
+            if(!(is_null($result))){
+                $this->prediction_result = $result;
+            }else{
+                $this->prediction_result = null;
+            }
+            return $this->prediction_result;
         }
         
     }

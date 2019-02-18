@@ -2,7 +2,6 @@
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
-
 $app = new \Slim\App;
 
 $app->post('/api/login', function(Request $request, Response $response){
@@ -59,15 +58,15 @@ $app->post('/api/register', function(Request $request, Response $response){
          $validate = new userControl();
 
          $json_success = array(
-                "responseCode" => $response->getStatusCode(),
-                "responseMessage" => "Success",
-                "success" => true
+                "Response Code" => $response->getStatusCode(),
+                "Response Message" => "Registration successful",
+                "Success" => true
              );
 
         $json_failure = array(
-                "responseCode" => $response->getStatusCode(),
-                "responseMessage" => "User already exists",
-                "success" => false
+                "Response Code" => $response->getStatusCode(),
+                "Response Message" => "User already exists",
+                "Success" => false
              );
         
         // //if($validate->does_user_exist($email)){
@@ -95,19 +94,78 @@ $app->post('/api/register', function(Request $request, Response $response){
 });
 
 
-$app->get('/api/predict', function(Request $request, Response $response){
-    // $flour = $request->getParam('flour');
-    // $sugar = $request->getParam('sugar');
+$app->post('/api/predict', function(Request $request, Response $response){
+    $flour = $request->getParam('flour');
+    $sugar = $request->getParam('sugar');
 
-    // $data = array($flour, $sugar);
-
-    $model = new model();
+    $model = new model($flour,$sugar);
     $prediction = $model->getPrediction();
 
-    // $resultData = json_decode($result, true);
+    $prediction_data = json_decode($prediction, true);
 
-    $response->withJson($prediction);
+    $json_success = array(
+        "Response Code" => $response->getStatusCode(),
+        "Response Message" => "Prediction Successful",
+        "Success" => true,
+        "data" => $prediction_data
+    );
+
+    $json_failure = array(
+        "Response Code" => $response->getStatusCode(),
+        "Response Message" => "Prediction Unsuccessful",
+        "Success" => false,
+        "data" => $prediction
+    );
+
+    if(!($prediction == null)){
+        $response->withJson($json_success);
+    }else{
+        $response->withJson($json_failure);
+    }
 
     return $response->withHeader('content-type', 'application/json');
+
+});
+
+
+$app->put('/api/update', function(Request $request, Response $response){
+    //$name = $request->getParam('name');
+    $email = $request->getParam('email');
+    $password = $request->getParam('password');
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+    $sql = "UPDATE users SET password = '$hashed_password' WHERE email = '$email'";
+
+     try{
+         $db = new myHeartdb();
+         $con = $db->get_connection();
+         $validate = new userControl();
+
+         $json_success = array(
+                "responseCode" => $response->getStatusCode(),
+                "responseMessage" => "Update successful",
+                "success" => true
+             );
+
+        $json_failure = array(
+                "responseCode" => $response->getStatusCode(),
+                "responseMessage" => "Update unsuccessful",
+                "success" => false
+             );
+        
+            $stmt = $con->query($sql);
+
+            if($stmt){
+                $response->withJson($json_success);
+            }else{
+                $response->withJson($json_failure);
+            }
+         
+
+    }catch(mysqli_sqli_exception $e){
+        echo "Error:" .$e->errorMessage();
+    }
+
+     return $response->withHeader('content-type', 'application/json');
 
 });
