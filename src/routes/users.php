@@ -95,29 +95,45 @@ $app->post('/api/register', function(Request $request, Response $response){
 
 
 $app->post('/api/predict', function(Request $request, Response $response){
-    $flour = $request->getParam('flour');
-    $sugar = $request->getParam('sugar');
+    //Get attributes from the APi request
+    $age = $request->getParam('age');
+    $sex = $request->getParam('sex');
+    $chest_pain = $request->getParam('chest_pain');
+    $blood_pressure = $request->getParam('blood_pressure');
+    $serum_cholestoral = $request->getParam('serum_cholestoral');
+    $fasting_blood_sugar = $request->getParam('fasting_blood_sugar');
+    $resting_ECG = $request->getParam('resting_ECG');
+    $max_heart_rate = $request->getParam('max_heart_rate');
+    $induced_angina = $request->getParam('induced_angina');
+    $ST_depression = $request->getParam('ST_depression');
+    $slope = $request->getParam('slope');
+    $no_of_vessels = $request->getParam('no_of_vessels');
+    $thal = $request->getParam('thal');
+    $diagnosis = null;
+    $prediction_result = null;
 
-    $model = new model($flour,$sugar);
-    $prediction = $model->getPrediction();
+    //Instantiate model with the prediction attriutes
+    $model = new model($age, $sex, $chest_pain, $blood_pressure, $serum_cholestoral, $fasting_blood_sugar, $resting_ECG, $max_heart_rate, $induced_angina, $ST_depression, $slope, $no_of_vessels, $thal);
 
-    $prediction_data = json_decode($prediction, true);
+    $diagnosis = $model->getPrediction();
+
+    $diagnosis_data = json_decode($diagnosis, true);
 
     $json_success = array(
         "Response Code" => $response->getStatusCode(),
         "Response Message" => "Prediction Successful",
         "Success" => true,
-        "data" => $prediction_data
+        "data" => $diagnosis_data
     );
 
     $json_failure = array(
         "Response Code" => $response->getStatusCode(),
         "Response Message" => "Prediction Unsuccessful",
         "Success" => false,
-        "data" => $prediction
+        "data" => $diagnosis_data
     );
 
-    if(!($prediction == null)){
+    if(!($diagnosis == null)){
         $response->withJson($json_success);
     }else{
         $response->withJson($json_failure);
