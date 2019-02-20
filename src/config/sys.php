@@ -41,56 +41,18 @@
 
     class model{
         // Attributes
-        private $age = null;
-        private $sex = null;
-        private $chest_pain = null;
-        private $blood_pressure = null;
-        private $serum_cholestoral = null;
-        private $fasting_blood_sugar = null;
-        private $resting_ECG = null;
-        private $max_heart_rate = null;
-        private $induced_angina = null;
-        private $ST_depression = null;
-        private $slope = null;
-        private $no_of_vessels = null;
-        private $thal = null;
-        private $diagnosis = null;
+        private $flour = null;
+        private $sugar = null;
         public $prediction_result = null;
 
-        function __construct($age, $sex, $chest_pain, $blood_pressure, $serum_cholestoral, $fasting_blood_sugar, $resting_ECG, $max_heart_rate, $induced_angina, $ST_depression, $slope, $no_of_vessels, $thal){
-            $this->age = $age;
-            $this->sex = $sex;
-            $this->chest_pain = $chest_pain; 
-            $this->blood_pressure = $blood_pressure;
-            $this->serum_cholestoral = $serum_cholestoral;
-            $this->fasting_blood_sugar = $fasting_blood_sugar;
-            $this->resting_ECG = $resting_ECG;
-            $this->max_heart_rate = $max_heart_rate;
-            $this->induced_angina = $induced_angina;
-            $this->ST_depression = $ST_depression;
-            $this->slope = $slope;
-            $this->no_of_vessels = $no_of_vessels;
-            $this->thal = $thal;
+        function __construct($flour, $sugar){
+            $this->flour = $flour;
+            $this->sugar = $sugar;
         }
 
         function getPrediction(){
-            $attributes = array(
-                $this->age, 
-                $this->sex,
-                $this->chest_pain, 
-                $this->blood_pressure,
-                $this->serum_cholestoral, 
-                $this->fasting_blood_sugar,
-                $this->resting_ECG, 
-                $this->max_heart_rate,
-                $this->induced_angina, 
-                $this->ST_depression,
-                $this->slope, 
-                $this->no_of_vessels,
-                $this->thal
-            );
-            $result = shell_exec('python "C:/xampp/htdocs/myHeart-model/predictive-model.py" ' .escapeshellarg(json_encode($attributes)));
-            
+            $attributes = array($this->flour, $this->sugar);
+            $result = shell_exec('python "C:/xampp/htdocs/myHeart-model/model.py" ' .escapeshellarg(json_encode($attributes)));
             if(!(is_null($result))){
                 $this->prediction_result = $result;
             }else{
