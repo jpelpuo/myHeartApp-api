@@ -5,57 +5,67 @@ use \Psr\Http\Message\ResponseInterface as Response;
 $app = new \Slim\App;
 
 $app->post('/api/login', function(Request $request, Response $response){
-    $email = $request->getParam('email');
+    $patient_id = $request->getParam('patient_id');
     $password = $request->getParam('password');
     $stmnt = null;
 
-    $sql = "SELECT * from users where email = '$email'";
+    $sql = "SELECT * from patient where patient_id = '$patient_id'";
 
     try{
          $db = new myHeartdb();
          $con = $db->get_connection();
          $stmt = $con->query($sql);
 
-         $user = $stmt->fetch_all(MYSQLI_ASSOC);
+         $patient = $stmt->fetch_all(MYSQLI_ASSOC);
 
-        if(password_verify($password, $user[0]['password'])){
+        if(password_verify($password, $patient[0]['password'])){
             $json_success = array(
-                "responseCode" => $response->getStatusCode(),
-                "responseMessage" => "Success",
-                "success" => true,
-                "data" => $user
+                "Response Code" => $response->getStatusCode(),
+                "Response Message" => "Success",
+                "Success" => true,
+                "Data" => $patient
             );
             $response->withJson($json_success);
         }else{
             $json_failure = array(
-                "responseCode" => $response->getStatusCode(),
-                "responseMessage" => "User not found",
-                "success" => false
+                "Response Code" => $response->getStatusCode(),
+                "Response Message" => "User not found",
+                "Success" => false
             );
             $response->withJson($json_failure);
          }
 
          
     }catch(mysqli_sqli_exception $e){
-        echo "Error:" .$e->errorMessage();
+        $response->getBody()->write($e->errorMessage());
     }
 
     return $response->withHeader('content-type', 'application/json');
 });
 
 
-$app->post('/api/register', function(Request $request, Response $response){
-    $name = $request->getParam('name');
+$app->post('/api/add', function(Request $request, Response $response){
+    $user = new userControl();
+
+    $firstname = $request->getParam('firstname');
+    $lastname = $request->getParam('lastname');
+    $name = $firstname ." ".$lastname;
     $email = $request->getParam('email');
-    $password = $request->getParam('password');
+    $sex = $request->getParam('sex');
+    $dob = $request->getParam('dob');
+    $contact = $request->getParam('contact');
+    $patient_id = $user->setPatientId();
+    $password = rand(1000, 10000);
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-    $sql = "INSERT INTO users (name, email, password) values('$name', '$email', '$hashed_password')";
+    $sql = "INSERT INTO patient (patient_id, name,email, sex, dob, password) values('$patient_id', '$name', '$email','$sex', '$dob', '$hashed_password')";
 
     try{
          $db = new myHeartdb();
          $con = $db->get_connection();
-         $validate = new userControl();
+         $mailer = new Mail($email, $patient_id, $password, $firstname);
+         
+         //$validate = new userControl();
 
          $json_success = array(
                 "Response Code" => $response->getStatusCode(),
@@ -69,20 +79,18 @@ $app->post('/api/register', function(Request $request, Response $response){
                 "Success" => false
              );
         
-        // //if($validate->does_user_exist($email)){
-        //     $json_exists = array(
-        //         "responseCode" => $response->getStatusCode(),
-        //         "responseMessage" => "User already exists",
-        //         "success" => false
-        //      );
-        //      $response->withJson($json_exists);
-        // }else{
-             $stmt = $con->query($sql);
-                if($stmt){
-                    $response->withJson($json_success);
-                }else{
-                    $response->withJson($json_failure);
-                }
+        $stmt = $con->query($sql);
+        if($stmt){
+            $response->withJson($json_success);
+            //Send mail to user
+            // $to = $email;
+            // $subject = "myHeart Registration Details";
+            // $message = "Hello ".$name. ",\r\n"."Your login details are: \r\n Patient ID: ".$patient_id."\r\n"."Password: ".$password;
+            // mail($to, $subject, $message);
+            $mailer->sendMail();
+        }else{
+            $response->withJson($json_failure);
+        }
         //}
          
 
@@ -95,29 +103,46 @@ $app->post('/api/register', function(Request $request, Response $response){
 
 
 $app->post('/api/predict', function(Request $request, Response $response){
-    $flour = $request->getParam('flour');
-    $sugar = $request->getParam('sugar');
+    //Get attributes from the API request
+    // $email = $request->getParam('email')
+    $age = $request->getParam('age');
+    $sex = $request->getParam('sex');
+    $chest_pain = $request->getParam('chest_pain');
+    $blood_pressure = $request->getParam('blood_pressure');
+    $serum_cholestoral = $request->getParam('serum_cholestoral');
+    $fasting_blood_sugar = $request->getParam('fasting_blood_sugar');
+    $resting_ECG = $request->getParam('resting_ECG');
+    $max_heart_rate = $request->getParam('max_heart_rate');
+    $induced_angina = $request->getParam('induced_angina');
+    $ST_depression = $request->getParam('ST_depression');
+    $slope = $request->getParam('slope');
+    $no_of_vessels = $request->getParam('no_of_vessels');
+    $thal = $request->getParam('thal');
+    $diagnosis = null;
+    $prediction_result = null;
 
-    $model = new model($flour,$sugar);
-    $prediction = $model->getPrediction();
+    //Instantiate model with the prediction attriutes
+    $model = new model($age, $sex, $chest_pain, $blood_pressure, $serum_cholestoral, $fasting_blood_sugar, $resting_ECG, $max_heart_rate, $induced_angina, $ST_depression, $slope, $no_of_vessels, $thal);
 
-    $prediction_data = json_decode($prediction, true);
+    $diagnosis = $model->getPrediction();
+
+    $diagnosis_data = json_decode($diagnosis, true);
 
     $json_success = array(
         "Response Code" => $response->getStatusCode(),
         "Response Message" => "Prediction Successful",
         "Success" => true,
-        "data" => $prediction_data
+        "data" => $diagnosis_data
     );
 
     $json_failure = array(
         "Response Code" => $response->getStatusCode(),
         "Response Message" => "Prediction Unsuccessful",
         "Success" => false,
-        "data" => $prediction
+        "data" => $diagnosis_data
     );
 
-    if(!($prediction == null)){
+    if(!($diagnosis == null)){
         $response->withJson($json_success);
     }else{
         $response->withJson($json_failure);
@@ -128,44 +153,96 @@ $app->post('/api/predict', function(Request $request, Response $response){
 });
 
 
-$app->put('/api/update', function(Request $request, Response $response){
-    //$name = $request->getParam('name');
-    $email = $request->getParam('email');
-    $password = $request->getParam('password');
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+$app->post('/api/save', function(Request $request, Response $response){
+    $patient_id = $request->getParam('patient_id');
+    $age = $request->getParam('age');
+    $sex = $request->getParam('sex');
+    $chest_pain = $request->getParam('chest_pain');
+    $blood_pressure = $request->getParam('blood_pressure');
+    $serum_cholestoral = $request->getParam('serum_cholestoral');
+    $fasting_blood_sugar = $request->getParam('fasting_blood_sugar');
+    $resting_ECG = $request->getParam('resting_ECG');
+    $max_heart_rate = $request->getParam('max_heart_rate');
+    $induced_angina = $request->getParam('induced_angina');
+    $ST_depression = $request->getParam('ST_depression');
+    $slope = $request->getParam('slope');
+    $no_of_vessels = $request->getParam('no_of_vessels');
+    $thal = $request->getParam('thal');
+    $diagnosis = $request->getParam('diagnosis');
+    $diagnosis_percent = $request->getParam('diagnosis_percent');
+    $prediction_date = date("Y-m-d");
 
-    $sql = "UPDATE users SET password = '$hashed_password' WHERE email = '$email'";
+    $sql = "INSERT INTO prediction (patient_id, age, sex, chest_pain, resting_blood_pressure, serum_cholesterol, fasting_blood_sugar, resting_ecg, max_heart_rate, induced_angina, st_depression, slope, no_of_vessels, thal, diagnosis, diagnosis_percent, prediction_date) values('$patient_id', '$age', '$sex', '$chest_pain', '$blood_pressure', '$serum_cholestoral', '$fasting_blood_sugar', '$resting_ECG', '$max_heart_rate', '$induced_angina', '$ST_depression', '$slope', '$no_of_vessels', '$thal', '$diagnosis', '$diagnosis_percent', '$prediction_date')";
 
-     try{
+    try{
          $db = new myHeartdb();
          $con = $db->get_connection();
-         $validate = new userControl();
+         //$validate = new userControl();
 
-         $json_success = array(
-                "responseCode" => $response->getStatusCode(),
-                "responseMessage" => "Update successful",
-                "success" => true
+        $json_success = array(
+                "Response Code" => $response->getStatusCode(),
+                "Response Message" => "Details saved.",
+                "Success" => true
              );
 
         $json_failure = array(
-                "responseCode" => $response->getStatusCode(),
-                "responseMessage" => "Update unsuccessful",
-                "success" => false
+                "Response Code" => $response->getStatusCode(),
+                "Response Message" => "Save unsuccessful. User not registered.",
+                "Success" => false
              );
-        
-            $stmt = $con->query($sql);
 
-            if($stmt){
-                $response->withJson($json_success);
-            }else{
-                $response->withJson($json_failure);
-            }
+        $stmt = $con->query($sql);
+        if($stmt){
+            $response->withJson($json_success);
+        }else{
+            $response->withJson($json_failure);
+        }
+        //}
          
 
     }catch(mysqli_sqli_exception $e){
         echo "Error:" .$e->errorMessage();
     }
 
-     return $response->withHeader('content-type', 'application/json');
+    return $response->withHeader('content-type', 'application/json');
+});
 
+
+$app->get('/api/prediction/{patient_id}', function(Request $request, Response $response){
+    $patient_id = $request->getAttribute('patient_id');
+
+    $sql = "SELECT * from prediction where patient_id = '$patient_id'";
+
+    try{
+        $db = new myHeartdb();
+        $con = $db->get_connection();
+
+        $stmt = $con->query($sql);
+
+        $prediction = $stmt->fetch_all(MYSQLI_ASSOC);
+
+        $json_success = array(
+            "Response Code" => $response->getStatusCode(),
+            "Response Message" => "Success",
+            "Success" => true,
+            "Data" => $prediction
+        );
+
+        $json_failure = array(
+            "Response Code" => $response->getStatusCode(),
+            "Response Message" => "No predictions found",
+            "Success" => false
+        );
+
+        if($stmt->num_rows > 0){
+            $response->withJson($json_success); 
+        }else{
+            $response->withJson($json_failure);
+        }
+
+    }catch(mysqli_sqli_exception $e){
+        $response->getBody()->write($e->errorMessage());
+    }
+
+    return $response->withHeader('content-type', 'application/json');
 });
