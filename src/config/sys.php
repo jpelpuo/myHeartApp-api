@@ -37,6 +37,8 @@
             return $count;
         }
 
+        // public function getsex($patient_id)
+
         public function setPatientId(){
             //$no_of_users = $this->getUsers();
             $sql = "SELECT * FROM patient ORDER BY patient_id DESC LIMIT 1";

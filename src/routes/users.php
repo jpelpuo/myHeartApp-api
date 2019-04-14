@@ -181,7 +181,7 @@ $app->post('/api/save', function(Request $request, Response $response){
 
         $json_success = array(
                 "Response Code" => $response->getStatusCode(),
-                "Response Message" => "Details saved.",
+                "Response Message" => "Details saved",
                 "Success" => true
              );
 
