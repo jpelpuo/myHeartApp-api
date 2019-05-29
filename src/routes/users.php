@@ -219,7 +219,7 @@ $app->get('/api/prediction/{patient_id}', function(Request $request, Response $r
 
         $stmt = $con->query($sql);
 
-        $prediction = $stmt->fetch_all(MYSQLI_ASSOC);
+        $prediction = $stmt->fetch_all(MYSQLI_ASSOC);  
 
         $json_success = array(
             "Response Code" => $response->getStatusCode(),
@@ -232,6 +232,59 @@ $app->get('/api/prediction/{patient_id}', function(Request $request, Response $r
             "Response Code" => $response->getStatusCode(),
             "Response Message" => "No predictions found",
             "Success" => false
+        );
+
+        if($stmt->num_rows > 0){
+            $response->withJson($json_success); 
+        }else{
+            $response->withJson($json_failure);
+        }
+
+    }catch(mysqli_sqli_exception $e){
+        $response->getBody()->write($e->errorMessage());
+    }
+
+    return $response->withHeader('content-type', 'application/json');
+});
+
+$app->get('/api/get/{patient_id}', function(Request $request, Response $response){
+    $patient_id = $request->getAttribute('patient_id');
+
+    $sql = "SELECT * from prediction right join patient on prediction.patient_id = patient.patient_id where prediction.patient_id = '$patient_id'";
+
+    $sql_query = "SELECT * from patient where patient_id = '$patient_id'";
+
+    try{
+        $db = new myHeartdb();
+        $con = $db->get_connection();
+
+        $stmt = $con->query($sql);
+
+        $stmt_query = $con->query($sql_query);
+
+        $prediction = $stmt->fetch_all(MYSQLI_ASSOC); 
+        
+        $details = $stmt_query->fetch_assoc();
+
+        $no_prediction = array(
+            "diagnosis_percent" => 0,
+            "prediction_date" => "No prediction history found"
+        );
+
+        $all_details = array_merge($details, $no_prediction);
+
+        $json_success = array(
+            "Response Code" => $response->getStatusCode(),
+            "Response Message" => "Success",
+            "Success" => true,
+            "Data" => $prediction
+        );
+
+        $json_failure = array(
+            "Response Code" => $response->getStatusCode(),
+            "Response Message" => "No predictions found",
+            "Success" => false,
+            "Data" => array($all_details)
         );
 
         if($stmt->num_rows > 0){
