@@ -113,7 +113,7 @@
                 $this->no_of_vessels,
                 $this->thal
             );
-            $result = shell_exec('python "C:/xampp/htdocs/myHeart-model/predictive-model.py" ' .escapeshellarg(json_encode($attributes)));
+            $result = shell_exec('python "C:/xampp/htdocs/myHeart-model/diagnose.py" ' .escapeshellarg(json_encode($attributes)));
             
             if(!(is_null($result))){
                 $this->prediction_result = $result;
